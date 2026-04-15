@@ -19,7 +19,8 @@ internal partial class Program
         CreateNotifyIcon();
 
         _currentDate = GetCurrentDate();
-        await LoadAsync(_cancellationTokenSource.Token);
+
+        LoadCache();
         StartFocusHook();
 
         var writerTask = WriterAsync(_cancellationTokenSource.Token);

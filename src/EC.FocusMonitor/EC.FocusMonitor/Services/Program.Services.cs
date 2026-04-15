@@ -162,14 +162,14 @@ internal partial class Program
             await File.WriteAllTextAsync(filePath, json);
     }
 
-    private static async Task LoadAsync(CancellationToken cancellationToken = default)
+    private static void LoadCache()
     {
         var filePath = Path.Combine(GetDataDirectory(), $"{GetCurrentDate()}.json");
         if (!File.Exists(filePath)) return;
 
         try
         {
-            var json = await File.ReadAllTextAsync(filePath, cancellationToken);
+            var json = File.ReadAllText(filePath);
             foreach (var focusApplication in json.FromJson<List<FocusApplication>>() ?? [])
             {
                 if (string.IsNullOrEmpty(focusApplication?.Name)) continue;
@@ -178,7 +178,7 @@ internal partial class Program
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[LoadAsync] {ex}");
+            Debug.WriteLine($"[LoadCache] {ex}");
         }
     }
 
