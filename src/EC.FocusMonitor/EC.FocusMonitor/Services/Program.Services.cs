@@ -14,6 +14,7 @@ internal partial class Program
     private static int _lastFocusProcessId;
     private static string? _lastFocusKey;
     private static string? _lastFocusTitle;
+    private static string? _lastFocusPath;
 
     private static void StartFocusHook()
     {
@@ -44,7 +45,7 @@ internal partial class Program
             {
                 var elapsed = now - _lastFocusTime;
                 if (elapsed > TimeSpan.Zero)
-                    RecordFocusTimeCore(_lastFocusKey, _lastFocusProcessId, _lastFocusTitle, elapsed);
+                    RecordFocusTimeCore(_lastFocusKey, _lastFocusProcessId, _lastFocusTitle, _lastFocusPath, elapsed);
                 _lastFocusKey = null;
             }
         }
@@ -58,6 +59,7 @@ internal partial class Program
         var title   = GetWindowTitle(hwnd);
         var key       = process?.ProcessName ?? "Idle";
         var processId = process?.Id ?? 0;
+        var path      = GetProcessPath(process);
 
         lock (_cacheLock)
         {
@@ -65,24 +67,27 @@ internal partial class Program
             {
                 var elapsed = now - _lastFocusTime;
                 if (elapsed > TimeSpan.Zero)
-                    RecordFocusTimeCore(_lastFocusKey, _lastFocusProcessId, _lastFocusTitle, elapsed);
+                    RecordFocusTimeCore(_lastFocusKey, _lastFocusProcessId, _lastFocusTitle, _lastFocusPath, elapsed);
             }
 
             _lastFocusTime      = now;
             _lastFocusKey       = key;
             _lastFocusProcessId = processId;
             _lastFocusTitle     = title;
+            _lastFocusPath      = path;
         }
     }
 
     // Caller must hold _cacheLock.
-    private static void RecordFocusTimeCore(string key, int processId, string? title, TimeSpan elapsed)
+    private static void RecordFocusTimeCore(string key, int processId, string? title, string? path, TimeSpan elapsed)
     {
         if (!_cache.TryGetValue(key, out var focusApplication))
         {
             focusApplication = new FocusApplication { Name = key };
             _cache[key] = focusApplication;
         }
+
+        focusApplication.Path ??= path;
 
         var focusProcess = focusApplication.Processes.FirstOrDefault(p => p.ProcessId == processId);
         if (focusProcess is null)
@@ -192,6 +197,18 @@ internal partial class Program
         catch (ArgumentException)
         {
             return default;
+        }
+    }
+
+    private static string? GetProcessPath(Process? process)
+    {
+        try
+        {
+            return process?.MainModule?.FileName;
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 
